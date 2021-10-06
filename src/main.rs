@@ -1,26 +1,45 @@
+use std::fs::File;
 use std::io;
 use std::io::prelude::*; 
 
 fn main()
 {
-	for z in -235..85
+	let radius = 100;
+	let step: f64 = 2.0 / (80 as f64);
+	let mut data: Vec<String> = Vec::new();
+	for z in -radius..radius
 	{
-		let j = f64::from(z) * 0.01;
-		for i in -16..16
+		let j = f64::from(z) * step;
+		let mut row = String::new();
+		for i in -radius..radius
 		{
-			let k = f64::from(i) * 0.1;
-			if mandelbrot(0.0, 0.0, j, k, 0)
+			let k = f64::from(i) * step;
+			if mandelbrot(0.0, 0.0, k, j, 0)
 			{
-				print!("*");
+				row.push_str("*");
 			}
 			else
 			{
-				print!(" ");
+				row.push_str(" ");
 			}
 			io::stdout().flush().unwrap();
 		}
-		println!();
+		row = String::from(row.trim_end());
+		data.push(row);
 	}
+
+	let mut data_string = String::new();
+	for s in data.iter()
+	{
+		if s.trim().is_empty() == false
+		{
+			data_string.push_str(&s);
+			data_string.push_str("\n");
+		}
+	}
+	
+	let mut file = File::create("mandelbrot.dat").unwrap();
+	file.write_all(data_string.as_bytes()).unwrap();
 }
 
 fn mandelbrot(z: f64, i: f64, z0: f64, i0: f64, n: i32) -> bool
