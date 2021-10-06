@@ -5,35 +5,64 @@ use std::io::prelude::*;
 fn main()
 {
 	let radius = 100;
-	let step: f64 = 2.0 / (80 as f64);
-	let mut data: Vec<String> = Vec::new();
+	let step: f64 = 2.0 / (radius as f64);
+	let mut data: Vec<Vec<String>> = Vec::new();
 	for z in -radius..radius
 	{
 		let j = f64::from(z) * step;
-		let mut row = String::new();
+		let mut row: Vec<String> = Vec::new();
 		for i in -radius..radius
 		{
 			let k = f64::from(i) * step;
 			if mandelbrot(0.0, 0.0, k, j, 0)
 			{
-				row.push_str("*");
+				row.push(String::from("*"));
 			}
 			else
 			{
-				row.push_str(" ");
+				row.push(String::from(" "));
 			}
 			io::stdout().flush().unwrap();
 		}
-		row = String::from(row.trim_end());
 		data.push(row);
+	}
+	
+	loop
+	{
+		let mut i = 0;
+		for r in data.iter()
+		{
+			if r[0].trim().is_empty()
+			{
+				i += 1;
+			}
+		}
+		if i == data.len()
+		{
+			for r in data.iter_mut()
+			{
+				r.remove(0);
+			}
+		}
+		else
+		{
+			break;
+		}
+	
 	}
 
 	let mut data_string = String::new();
-	for s in data.iter()
+	for r in data.iter()
 	{
-		if s.trim().is_empty() == false
+		let mut row = String::new();
+		for c in r.iter()
 		{
-			data_string.push_str(&s);
+			row.push_str(c);
+		}
+		if row.trim().is_empty() == false
+		{
+			row = String::from(row.trim_end());
+			data_string.push_str(&row);
 			data_string.push_str("\n");
 		}
 	}
