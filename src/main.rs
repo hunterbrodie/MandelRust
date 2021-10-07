@@ -1,85 +1,84 @@
-use std::fs::File;
-use std::io;
-use std::io::prelude::*; 
+extern crate image;
+use image::{ImageBuffer};
+
+use std::env;
+
+use std::thread;
 
 fn main()
 {
-	let radius = 100;
-	let step: f64 = 2.0 / (radius as f64);
-	let mut data: Vec<Vec<String>> = Vec::new();
-	for z in -radius..radius
+	let args: Vec<String> = env::args().collect();
+	let sections = args[1].parse::<i32>().unwrap();
+
+	let step: f64 = 2.1 / (sections as f64);
+	let mut data: Vec<Vec<u8>> = Vec::new();
+
+	let mut handles: Vec<std::thread::JoinHandle<Vec<u8>>> = Vec::new();
+
+	let mut threads = 0;
+
+	for z in -sections..sections
 	{
 		let j = f64::from(z) * step;
-		let mut row: Vec<String> = Vec::new();
-		for i in -radius..radius
+
+		threads += 1;
+
+		if threads % 8 == 0
 		{
-			let k = f64::from(i) * step;
-			if mandelbrot(0.0, 0.0, k, j, 0)
+			for handle in handles
 			{
-				row.push(String::from("*"));
+				data.push(handle.join().unwrap());
 			}
-			else
-			{
-				row.push(String::from(" "));
-			}
-			io::stdout().flush().unwrap();
+
+			handles = Vec::new();
 		}
-		data.push(row);
-	}
+
+		handles.push(thread::spawn(move ||
+		{
+			let mut row: Vec<u8> = Vec::new();
+
+			for i in -sections..sections
+			{
+				let k = f64::from(i) * step;
 	
-	loop
-	{
-		let mut i = 0;
-		for r in data.iter()
-		{
-			if r[0].trim().is_empty()
-			{
-				i += 1;
+				row.push(mandelbrot(0.0, 0.0, j, k, 0));
 			}
-		}
-		if i == data.len()
-		{
-			for r in data.iter_mut()
-			{
-				r.remove(0);
-			}
-		}
-		else
-		{
-			break;
-		}
-	
+
+			row
+		}));
 	}
 
-	let mut data_string = String::new();
-	for r in data.iter()
+	for handle in handles
 	{
-		let mut row = String::new();
-		for c in r.iter()
-		{
-			row.push_str(c);
-		}
-		if row.trim().is_empty() == false
-		{
-			row = String::from(row.trim_end());
-			data_string.push_str(&row);
-			data_string.push_str("\n");
-		}
+		data.push(handle.join().unwrap());
 	}
-	
-	let mut file = File::create("mandelbrot.dat").unwrap();
-	file.write_all(data_string.as_bytes()).unwrap();
+
+	println!("Done Calculating Mandelbrot Set!");
+
+	write_to_image(data);
+
+	println!("Done Writing Mandelbrot Set!");
 }
 
-fn mandelbrot(z: f64, i: f64, z0: f64, i0: f64, n: i32) -> bool
+fn write_to_image(data: Vec<Vec<u8>>)
+{
+	let img = ImageBuffer::from_fn(data.len() as u32, data[0].len() as u32, |x, y|
+	{
+		image::Luma([data[x as usize][y as usize]])
+	});
+
+	img.save("mandelbrot.png").unwrap();
+}
+
+fn mandelbrot(z: f64, i: f64, z0: f64, i0: f64, n: u8) -> u8
 {
 	let i_n: f64 = 2.0 * z * i + &i0;
 	let z_n: f64 = z.powi(2) - i.powi(2) + &z0;
 	if bounded(z_n, i_n)
 	{
-		if n == 100
+		if n == 255
 		{
-			true
+			return n
 		}
 		else
 		{
@@ -88,7 +87,7 @@ fn mandelbrot(z: f64, i: f64, z0: f64, i0: f64, n: i32) -> bool
 	}
 	else
 	{
-		return false
+		return n
 	}
 }
 
